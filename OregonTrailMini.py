@@ -12,11 +12,11 @@ class OregonTrailMini:
         self.state = {
             "day": 0,
             "distance": 0,
-            "goal": 2000,
-            "food": 10,
-            "health": 3,
+            "goal": 150,
+            "food": 25,
+            "health": 5,
             "alive": True,
-            "events": []
+            "events": [],
         }
 
     def step(self, action):
@@ -25,16 +25,15 @@ class OregonTrailMini:
         s["events"] = []
         reward = 0
 
-        if s["food"] <= 0:
+        if s["food"] <= 0:    #Reduce health from hunger,no food.
             s["health"] -= 1
             s["events"].append("No food! Lost 1 health.")
         else:
-            s["food"] -= 3
+            s["food"] -= 5    #Daily food consumption
 
         if action == "rest":
-            s["food"] -= 2  # increase food used for resting
             if s["health"] < 5:
-                if random.random() < 0.4:
+                if random.random() < 0.5:
                     s["health"] += 1
                     s["events"].append("Rested and gained 1 health.")
                 else:
@@ -42,34 +41,36 @@ class OregonTrailMini:
             else:
                 s["events"].append("Rested but already at full health.")
         elif action == "hunt":
-            food_found = random.randint(3, 8)
+            food_found = random.randint(5, 15)
             s["food"] += food_found
             if random.random() < 0.3:
-                s["health"] -= 1
+                lost = 1 #random.randint(1, 2)
+                s["health"] -= lost
                 s["events"].append(f"Hunted and found {food_found} food, but got injured.")
             else:
                 s["events"].append(f"Hunted and found {food_found} food.")
         elif action == "travel":
             dist = random.randint(5, 15)
-            s["food"] -= 2  # extra food cost for traveling
             s["distance"] += dist
             s["events"].append(f"Traveled {dist} miles.")
-            if random.random() < 0.2:
+            if random.random() < 0.1:
                 s["health"] -= 1
                 s["events"].append("Injured while traveling.")
+            
+            if s["distance"] % 25 < dist:
+                s["events"].append("Bonus: Reached a 25-mile milestone!")
         else:
             s["events"].append("Invalid action.")
-            reward = 0
 
         if s["health"] <= 0:
             s["alive"] = False
             s["events"].append("Died from poor health.")
-            reward = -1000
+            reward -= 1000
 
         if s["distance"] >= s["goal"]:
             s["alive"] = False
             s["events"].append("You reached your goal!")
-            reward = 1000 - s["day"] * 1
+            reward += 1000 - (s["day"] * 1)
 
         return s.copy(), reward, not s["alive"], {}
 
@@ -117,4 +118,4 @@ class OregonTrailMini:
 if __name__ == "__main__":
     game = OregonTrailMini()
     agent = QLearningAgent(actions=["rest", "hunt", "travel"])
-    game.run_agent(agent, episodes=20000)
+    game.run_agent(agent, episodes=200000)
