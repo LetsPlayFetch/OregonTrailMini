@@ -1,10 +1,6 @@
 import random
 import pickle
-"""Additional Ideas:
-- Save and load the Q-table using pickle
-- Implement epsilon decay 
 
-"""
 class QLearningAgent:
     def __init__(self, actions, learning_rate=0.1, discount_factor=0.95, exploration_rate=0.1):
         self.q_table = {}  # (state, action) -> value
@@ -35,4 +31,4 @@ class QLearningAgent:
         self.q_table[state_key][action] = updated_q
 
     def _state_to_key(self, state):
-        return (state["distance"] // 10, state["food"] // 5, state["health"])
+        return (state["distance"] , state["food"] , state["health"])
