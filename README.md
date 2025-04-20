@@ -5,7 +5,7 @@ OregonTrailMini is a simple survival sim built to interact with reinforcement le
 ---
 ## How to Run it 
  
-Once you've cloned the repo, install Python 3, any dependencies, then run:
+Once you've cloned the repo, install Python 3, then run:
  
 ```bash
 python3 OregonTrailMini.py
@@ -18,11 +18,13 @@ Once it finishes all simulations, it will output a file like:
 ```
 training_results_00.csv
 ```
- 
-You can use this to interpret how well the agent learned over time 
+![This is the graph for Oregon Trail rl, it shows performance maxind out around 8,000 trials](resources/graph1.jpg "Graph 1")
 
 ---
- 
+## What is Reinforecemnt Learning 
+RL, for short, is a form of machine learnrning where an agent learns by taking an action, observing the result, and adjusting its strategy based on the reward or pentalty it receives. In our graph above you can see that it slowly optimized its chocies over time.
+
+---
 ## How the game works
 
 Every day, the agent (or player) picks one of three actions with corresponding effects:
@@ -30,40 +32,36 @@ Every day, the agent (or player) picks one of three actions with corresponding e
 - `hunt`: might cause injury, might gain food
 - `rest`: might heal
 
-There goal is make it to end without dying and with the best speed.
+There goal is make it to end without dying and with the best speed possible.
 
 You can build upon this logic, or change the effects of events here 
 ```OregonTrailMini.py
-        if action == "rest":
-            if s["health"] < 5:
-                if random.random() < 0.5:
-                    s["health"] += 1
+    if action == "rest":
+        if s["health"] < 5:
+            if random.random() < 0.5:
+                s["health"] += 1
 
-        elif action == "hunt":
-            s["food"] += random.randint(5, 15) # Food found while hunting 
-            if random.random() < 0.3: # Possibility of injury
-                s["health"] -= 1
+    elif action == "hunt":
+        s["food"] += random.randint(5, 15) # Food found while hunting 
+        if random.random() < 0.3: # Possibility of injury
+            s["health"] -= 1
 
-        elif action == "travel":
-            dist = random.randint(5, 15)
-            s["distance"] += dist
-            s["events"].append(f"Traveled {dist} miles.")
-            if random.random() < 0.1:
-                s["health"] -= 1
+    elif action == "travel":
+        dist = random.randint(5, 15)
+        s["distance"] += dist
+        s["events"].append(f"Traveled {dist} miles.")
+        if random.random() < 0.1:
+            s["health"] -= 1
 ```
 
-Above this it handles the daily food consumption, it can go negative by a few but forces itsselt to correct and makes up the defecit.
 
 Below it validates if the game is over and steps to the next day
-
 Run out of health, lose. 
 Make it to the end, win.
 
----
+- **HEALTH**: - Is tracked on a scale from 0-5, if it reaches 0 player dies
 
-## Game Variables
-
-In addition to this, you also have variables defined in the main OregonTrailMini class:
+In addition to this, you also have starting defined in the main OregonTrailMini class. You can adjust length and starting resource values here
 
 ```OregonTrailMini.py
 def reset(self):
@@ -78,27 +76,39 @@ def reset(self):
     }
 ```
 
-By increasing your goal, and giving the game more complex conditional logic you can affect how it learns
-
-Right now it attains the greedy solution after about 20,000 attempts than just continues the same 'Random checking pattern 
-
-***Add a photo here of that graph
-
-
-"I have additional models built upon the base offering a much harder, and longer game..
-
-you can the that model here over the course of 20,000
-
-In the provided demo the given soltuion is pretty easy to obtain ourselves... We can put this kind of program into an advanced homework implementation. 
-
-Our pioneer needs to travel 500 miles, everyday he is given 3 options. Traveling, Resting and Hunting. Traveling progresses him 10, 15, or 20 miles. 
+\
 ---
 ## How RandomAgent Works
+The agent uses Q-learning.
+In RandomAgent.py we define our Q-learning class. It’s again straight forward. choose_action is how we decide the next move
+```
+def choose_action(self, state):
+    state_key = self._state_to_key(state)
+    if random.random() < self.epsilon or state_key not in self.q_table:
+        return random.choice(self.actions)
+    return max(self.q_table[state_key], key=self.q_table[state_key].get)
+```
 
+The learn function is what handles updating the q table. It loads our current state variables , the choice made, and the reward. Then it checks if we’ve ever taken an action from that spot before; if not, it gets added it to the table. After that, it grabs the current Q-value for the action and compares it to the max possible Q-value from the next state. These two values get blended to update the Q-table, helping the agent remember what worked and improve next time.
 
-The most important variable is the number of episodes. This controls how many simulations the agent will run while training. 
+```python
+def learn(self, state, action, reward, next_state):
+    state_key = self._state_to_key(state)
+    next_key = self._state_to_key(next_state)
 
-You can set it here in:
+    if state_key not in self.q_table:
+        self.q_table[state_key] = {a: 0.0 for a in self.actions}
+    if next_key not in self.q_table:
+        self.q_table[next_key] = {a: 0.0 for a in self.actions}
+
+    current_q = self.q_table[state_key][action]
+    max_future_q = max(self.q_table[next_key].values())
+    updated_q = current_q + self.lr * (reward + self.df * max_future_q - current_q)
+
+    self.q_table[state_key][action] = updated_q
+```
+
+You set the number of trials or episodes here in
 OregonTrailMini.py
 ```python
 if __name__ == "__main__":
@@ -107,56 +117,28 @@ if __name__ == "__main__":
     game.run_agent(agent, episodes=100000)
 ```
 
-The agent uses Q-learning. At first, it’s mostly guessing just trying out random actions. But as it plays more games, it starts to figure out what works and doesn’t.
 
-
-Each state (move) is compressed into a key like:
-```python
-(state["distance"] // 10, state["food"] // 5, state["health"])
-```
-
-Then it decides what move to take here. If it's still exploring it'll just pick randomly:
-```python
-if random.random() < self.epsilon:
-    return random.choice(self.actions)
-```
-
-Otherwise, it goes with what it thinks is best:
-```python
-return max(self.q_table[state_key], key=self.q_table[state_key].get)
-```
-
-Every time it does something, it updates its memory (Q-table) like this:
-```python
-updated_q = current_q + self.lr * (reward + self.df * max_future_q - current_q)
-```
-
-
-## Reward System
+##### Reward System
+The reward system is... simple. Only get points when youve won or lost. You cann add or subract rewards at any point in the code, i.e. reward progress, punish pointless rest days etc.
  
  - **Dying is very bad**: -1000 points
  - **Winning is very good**: Up to +1000, scaled by how fast you made it
  - **Faster win is better**: Getting there fast matters (-1 point per day)
  ```OregonTrailMini.py
-         if s["health"] <= 0:
-            s["alive"] = False 
-            reward -= 1000
+    if s["health"] <= 0:
+    s["alive"] = False 
+        reward -= 1000
 
-        if s["distance"] >= s["goal"]:
-            s["alive"] = False          # Changing state to dead is how the game ends
-            s["events"].append("You reached your goal!")
-            reward += 5000 - (s["day"] * 1)
+    if s["distance"] >= s["goal"]:
+        s["alive"] = False       # Changing state to dead is how the game ends
+        s["events"].append("You reached your goal!")
+        reward += 5000 - (s["day"] * 1)
 
-        return s.copy(), reward, not s["alive"], {}
+    return s.copy(), reward, not s["alive"], {}
 ```
 
 # Results
-![This is the graph for Oregon Trail rl, it shows performance maxind out around 7,000 trials](resources/graph1.jpg "Graph 1")
 
-I have additional variations and builds that i hope to add for contrast here soon 
----
-
-#
 
 ## Planned addition 
  - I want to add a more dynamic difficulty system.  
