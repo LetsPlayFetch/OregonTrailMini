@@ -55,9 +55,9 @@ class OregonTrailMini:
             reward -= 1000
 
         if s["distance"] >= s["goal"]:
-            s["alive"] = False # Changing state to dead is how the game ends
+            s["alive"] = False          # Changing state to dead is how the game ends
             s["events"].append("You reached your goal!")
-            reward += 5000 - (s["day"] * 1)
+            reward += 5000 - (s["day"] * 7)
 
         return s.copy(), reward, not s["alive"], {}
 
@@ -76,11 +76,6 @@ class OregonTrailMini:
                 next_state, reward, done, _ = self.step(action)
                 agent.learn(state, action, reward, next_state)
                 state = next_state
-
-                # print(f"\nDay {self.state['day']} | Action: {action}")
-                # print(f"Distance: {self.state['distance']}/{self.state['goal']} | Food: {self.state['food']} | Health: {self.state['health']}")
-                # for e in self.state['events']:
-                #     print(f"- {e}")
 
             results.append({
                 "episode": ep,
@@ -105,4 +100,4 @@ class OregonTrailMini:
 if __name__ == "__main__":
     game = OregonTrailMini()
     agent = QLearningAgent(actions=["rest", "hunt", "travel"])
-    game.run_agent(agent, episodes=100000)
+    game.run_agent(agent, episodes=50000)
